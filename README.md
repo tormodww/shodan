@@ -7,6 +7,8 @@ Et enklere søkegrensesnitt oppå Shodan-API-et: søkebygger, grupperinger (fase
 - **InternetDB (gratis, standard):** slår opp IP-er, CIDR-nett (maks /22) og domener mot [Shodan InternetDB](https://internetdb.shodan.io). Krever ingen nøkkel. Du får porter, CVE-er, tags, CPE-er og vertsnavn, gruppert med drill-down og CSV-eksport. Domener slås opp via Cloudflare DNS-over-HTTPS. Ferdige forslag ligger som knapper (norske nettsteder, banker, offentlig sektor, DNS-resolvere og «min IP»). «📷 Kamera-sjekk» filtrerer på kamera-porter (554, 8554, 8000, 37777, 34567), kamera-CPE-er (Hikvision, Dahua, Axis, Reolink …) og webcam-tag – nyttig for å se om egne kameraer er eksponert.
 - **Shodan-søk (API-nøkkel):** fullt søk med filtre og fasetter. Krever betalt Shodan-nivå (Membership eller høyere) for filtre. En gratis nøkkel gir bare oppslag på enkelt-IP-er og visning av credits. Sidepanelet har ferdige forslag til søk (eksponerte tjenester i Norge, sårbarhet og hygiene, admin-flater, oversikt), definert i `src/presets.ts`.
 
+- **Netlas (API-nøkkel, gratis Community-plan, ca. 50 forespørsler/dag):** samme søkebygger, filtre og forslag som Shodan-fanen. Filtrene oversettes til Netlas' spørrespråk (`geo.country`, `port`, `whois.asn.name`, `tag.name`, `cve.name` …). Filtre uten Netlas-motstykke hoppes over med en advarsel. «Tell og grupper» koster 1 + antall grupperinger forespørsler; forbruket telles i nettleseren. Forslag lastes uten å kjøre, for å spare kvoten. Nøkkelen settes som `NETLAS_API_KEY` i `.env`.
+
 ## Funksjoner (Shodan-søk)
 
 - **Søkebygger**: fritekst + filterrader (land, port, org, produkt, CVE, nett, HTTP-tittel, SSL …). `+`/`−` per rad for å inkludere/ekskludere. Ferdig spørring vises og kan kopieres.
@@ -63,6 +65,8 @@ src/shodan.ts       API-klient og typer
 src/internetdb.ts   InternetDB-klient, CIDR/DNS-tolking, grupperinger
 src/InternetDbView.tsx  InternetDB-fanen
 src/presets.ts      forhåndsdefinerte søk (rediger fritt)
+src/netlas.ts       Netlas-klient og oversetting Shodan-filter -> Netlas-spørring
+src/NetlasView.tsx  Netlas-fanen
 src/query.ts        filter-/fasettdefinisjoner, bygging av spørring, URL-hash
 src/storage.ts      localStorage for lagrede søk og historikk
 src/components.tsx  søkebygger, fasettpanel, resultattabell, detaljpanel

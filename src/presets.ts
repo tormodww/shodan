@@ -16,6 +16,8 @@ export interface Preset {
   name: string;
   description: string;
   state: QueryState;
+  /** false = finnes ikke i Netlas (Shodan-spesifikk syntaks). */
+  netlas?: boolean;
 }
 
 /** Forhåndsdefinerte Shodan-søk (krever betalt API-nivå for filtre). */
@@ -31,7 +33,7 @@ export const SHODAN_PRESETS: Preset[] = [
   // Sårbarhet og hygiene
   { group: 'Sårbarhet og hygiene', name: 'Kjent sårbare verter (NO)', description: 'Verter med minst én CVE', state: preset('', [['country', 'NO'], ['has_vuln', 'true']], ['vuln', 'product', 'org']) },
   { group: 'Sårbarhet og hygiene', name: 'Utløpte SSL-sertifikater (NO)', description: 'ssl.cert.expired:true', state: preset('', [['country', 'NO'], ['ssl.cert.expired', 'true']], ['org', 'ssl.version']) },
-  { group: 'Sårbarhet og hygiene', name: 'Gammel TLS (NO)', description: 'Servere som fortsatt tilbyr TLS 1.0', state: preset('ssl.version:tlsv1', [['country', 'NO']], ['org', 'product']) },
+  { group: 'Sårbarhet og hygiene', name: 'Gammel TLS (NO)', description: 'Servere som fortsatt tilbyr TLS 1.0', state: preset('ssl.version:tlsv1', [['country', 'NO']], ['org', 'product']), netlas: false },
   { group: 'Sårbarhet og hygiene', name: 'Selvsignerte sertifikater (NO)', description: 'tag:self-signed', state: preset('', [['country', 'NO'], ['tag', 'self-signed']], ['org', 'port']) },
   // Admin-flater og infrastruktur
   { group: 'Admin-flater', name: 'Jenkins', description: 'Jenkins-dashbord', state: preset('', [['http.title', 'Dashboard [Jenkins]']], ['country', 'org', 'version']) },

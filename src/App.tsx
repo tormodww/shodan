@@ -12,6 +12,7 @@ import {
   type QueryState,
 } from './query';
 import InternetDbView from './InternetDbView';
+import NetlasView from './NetlasView';
 import { SHODAN_PRESETS } from './presets';
 import { shodan, type ApiInfo, type Match, type SearchResult } from './shodan';
 import {
@@ -25,7 +26,7 @@ import {
 } from './storage';
 
 type Mode = 'count' | 'search';
-type View = 'idb' | 'shodan';
+type View = 'idb' | 'shodan' | 'netlas';
 const VIEW_KEY = 'shodan-sok.view';
 
 function friendlyError(e: Error & { status?: number }): string {
@@ -163,6 +164,9 @@ export default function App() {
           <button className={view === 'shodan' ? 'active' : ''} onClick={() => switchView('shodan')}>
             Shodan-søk <small>API-nøkkel</small>
           </button>
+          <button className={view === 'netlas' ? 'active' : ''} onClick={() => switchView('netlas')}>
+            Netlas <small>50/dag</small>
+          </button>
         </nav>
         <div className="credits">
           {info ? (
@@ -181,6 +185,8 @@ export default function App() {
         <div className="layout single">
           <InternetDbView />
         </div>
+      ) : view === 'netlas' ? (
+        <NetlasView />
       ) : (
       <div className="layout">
         <aside className="side">
