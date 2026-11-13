@@ -13,6 +13,7 @@ import {
 } from './query';
 import InternetDbView from './InternetDbView';
 import NetlasView from './NetlasView';
+import Versjon from './Versjon';
 import { SHODAN_PRESETS } from './presets';
 import { shodan, type ApiInfo, type Match, type SearchResult } from './shodan';
 import {
@@ -178,6 +179,7 @@ export default function App() {
           ) : (
             <span className="muted">API-info utilgjengelig – sjekk SHODAN_API_KEY</span>
           )}
+          <Versjon className="muted" />
         </div>
       </header>
 

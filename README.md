@@ -29,9 +29,11 @@ Merk: alle som når siden kan bruke nøkkelen din via proxyen. Kjør den på LAN
 
 ```bash
 cp .env.example .env        # sett SHODAN_API_KEY
-docker compose up -d --build
+sh deploy.sh                # henter siste versjon, bygger og starter
 # åpne http://<pi-ip>:8473
 ```
+
+`deploy.sh` setter byggeinfo med `byggeinfo.sh` (samme fil som i familiesiden), og appen viser «Versjon 12 · bygget …» øverst til høyre. PR-nummeret slås opp på GitHub fra commiten, så det er uavhengig av commitmeldingene. Er commiten pushet rett til main uten PR, vises commit-hashen. Bygges appen med `docker compose up -d --build` uten byggeinfo, vises ingen versjon.
 
 Imagene (`node:22-alpine`, `nginx:stable-alpine`) er multi-arch og fungerer på arm64.
 
