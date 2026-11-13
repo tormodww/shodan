@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { DetailDrawer, FacetPanel, GROUP_BY, QueryBuilder, ResultsTable } from './components';
-import { NETLAS_FIELD_TO_FILTER, PAGE_SIZE, netlas, netlasFacets, translate, usageToday } from './netlas';
+import { NETLAS_FIELD_TO_FILTER, PAGE_SIZE, PLANS, netlas, netlasFacets, translate, usageToday, type NetlasPlan } from './netlas';
 import { SHODAN_PRESETS } from './presets';
 import { FACETS, emptyQuery, newId, type QueryState } from './query';
 import type { FacetBucket, Match } from './shodan';
 import { downloadFile } from './storage';
 
 const STATE_KEY = 'shodan-sok.netlas-state';
-const DAILY_LIMIT = 50; // Community-planen
+const PLAN_KEY = 'shodan-sok.netlas-plan';
 const PRESET_GROUPS = [...new Set(SHODAN_PRESETS.map((p) => p.group))];
 const LABELS = Object.fromEntries(
   Object.entries(NETLAS_FIELD_TO_FILTER).map(([field, key]) => [
@@ -16,6 +16,7 @@ const LABELS = Object.fromEntries(
   ]),
 );
 LABELS['tag.name'] = 'Produkt / teknologi';
+LABELS.protocol = 'Protokoll';
 
 function loadState(): QueryState {
   try {
@@ -37,6 +38,22 @@ export default function NetlasView() {
   const [groupBy, setGroupBy] = useState('');
   const [open, setOpen] = useState<Match | null>(null);
   const [used, setUsed] = useState(usageToday);
+  const [plan, setPlanRaw] = useState<NetlasPlan>(() => {
+    try {
+      return (localStorage.getItem(PLAN_KEY) as NetlasPlan) || 'community';
+    } catch {
+      return 'community';
+    }
+  });
+  const setPlan = (p: NetlasPlan) => {
+    setPlanRaw(p);
+    try {
+      localStorage.setItem(PLAN_KEY, p);
+    } catch {
+      /* ignorer */
+    }
+  };
+  const DAILY_LIMIT = PLANS.find((p) => p.key === plan)!.daily;
 
   const setState = (s: QueryState) => {
     setStateRaw(s);
@@ -47,8 +64,8 @@ export default function NetlasView() {
     }
   };
 
-  const { query, warnings } = useMemo(() => translate(state), [state]);
-  const { fields, skipped } = useMemo(() => netlasFacets(state.facets), [state.facets]);
+  const { query, warnings } = useMemo(() => translate(state, plan), [state, plan]);
+  const { fields, skipped } = useMemo(() => netlasFacets(state.facets, plan), [state.facets, plan]);
 
   const guard = async (fn: () => Promise<void>) => {
     setLoading(true);
@@ -65,9 +82,9 @@ export default function NetlasView() {
 
   const group = (s: QueryState = state) =>
     guard(async () => {
-      const t = translate(s);
+      const t = translate(s, plan);
       if (!t.query) throw new Error('Skriv inn fritekst eller legg til minst ett filter.');
-      const f = netlasFacets(s.facets).fields;
+      const f = netlasFacets(s.facets, plan).fields;
       const [count, ...buckets] = await Promise.all([
         netlas.count(t.query),
         ...f.map((field) => netlas.facet(t.query, field, s.facetSize)),
@@ -117,11 +134,15 @@ export default function NetlasView() {
             <details key={g} className="preset-group" open={i === 0}>
               <summary>{g}</summary>
               <ul className="list">
-                {SHODAN_PRESETS.filter((p) => p.group === g && p.netlas !== false).map((p) => (
+                {SHODAN_PRESETS.filter((p) => p.group === g && p.netlas !== false).map((p) => {
+                  const t = translate(p.state, plan);
+                  const lost = t.warnings.filter((w) => w.includes('hoppet over'));
+                  const degraded = t.warnings.length > 0;
+                  return (
                   <li key={p.name}>
                     <button
-                      className="link"
-                      title={`${p.description}\n${translate(p.state).query}`}
+                      className={`link ${lost.length ? 'disabled-link' : ''}`}
+                      title={`${p.description}\n${t.query}${t.warnings.length ? `\n⚠ ${t.warnings.join('\n⚠ ')}` : ''}`}
                       onClick={() => {
                         setState(p.state);
                         setTotal(null);
@@ -131,22 +152,27 @@ export default function NetlasView() {
                     >
                       {p.name}
                     </button>
+                    {degraded && <span className="small" title={t.warnings.join('\n')}>{lost.length ? '🔒' : '≈'}</span>}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </details>
           ))}
-          <p className="muted small">Forslag lastes inn uten å kjøre, så du sparer forespørsler.</p>
+          <p className="muted small">Forslag lastes inn uten å kjøre, så du sparer forespørsler. ≈ = forenklet for planen din, 🔒 = mister filtre (krever høyere plan).</p>
         </section>
         <section className="card">
           <header>
             <h2>Forbruk i dag</h2>
+            <select value={plan} onChange={(e) => setPlan(e.target.value as NetlasPlan)} title="Din Netlas-plan">
+              {PLANS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
           </header>
           <div className="meter">
             <div style={{ width: `${Math.min(100, (used / DAILY_LIMIT) * 100)}%` }} />
           </div>
           <p className="muted small">
-            {used} av ~{DAILY_LIMIT} forespørsler (telt i denne nettleseren, Community-planen)
+            {used} av ~{DAILY_LIMIT} forespørsler (telt i denne nettleseren)
           </p>
         </section>
       </aside>

@@ -17,6 +17,33 @@ const orList = (field: string) => (v: string) => {
 
 const ICS = 'protocol:(modbus OR s7 OR bacnet OR dnp3 OR fox OR ethernetip OR iec104 OR opcua)';
 const CAMERAS = '(protocol:rtsp OR tag.name:(hikvision OR dahua OR axis OR reolink OR foscam OR uniview))';
+const CAMERAS_BASIC =
+  '(protocol:rtsp OR http.title:(camera OR webcam OR "network camera" OR "ip camera" OR hikvision OR dahua OR dvr OR nvr))';
+
+// --- Planer -------------------------------------------------------------------------
+// Fra netlas.io/pricing og docs.netlas.io/faq: CVE- og tag-søk krever Business,
+// SSL-sertifikater krever Freelancer. Community: 50 forespørsler/dag.
+
+export type NetlasPlan = 'community' | 'freelancer' | 'business';
+export const PLANS: { key: NetlasPlan; label: string; daily: number }[] = [
+  { key: 'community', label: 'Community (gratis)', daily: 50 },
+  { key: 'freelancer', label: 'Freelancer', daily: 1000 },
+  { key: 'business', label: 'Business+', daily: 10000 },
+];
+const RANK: Record<NetlasPlan, number> = { community: 0, freelancer: 1, business: 2 };
+
+/** Returnerer navnet på planen som trengs hvis uttrykket bruker felt planen ikke har. */
+function requiredPlan(expr: string, plan: NetlasPlan): string | null {
+  if (RANK[plan] < 2 && /(^|[\s(!])(tag|cve)\./.test(expr)) return 'Business';
+  if (RANK[plan] < 1 && /(^|[\s(!])certificate\./.test(expr)) return 'Freelancer';
+  return null;
+}
+
+/** Erstatninger med felt som finnes i lavere planer. */
+const BASIC_FALLBACK: Record<string, Translator> = {
+  product: (v) => `http.headers.server:${q(v.replace(/ httpd$/i, ''))}`,
+  'screenshot.label': (v) => (/webcam|camera/i.test(v) ? CAMERAS_BASIC : null),
+};
 
 /** Shodan-filter -> Netlas-uttrykk. null = ikke støttet i Netlas. */
 const FILTER_MAP: Record<string, Translator> = {
@@ -84,7 +111,7 @@ export interface Translated {
   warnings: string[];
 }
 
-export function translate(state: Pick<QueryState, 'text' | 'filters'>): Translated {
+export function translate(state: Pick<QueryState, 'text' | 'filters'>, plan: NetlasPlan = 'business'): Translated {
   const parts: string[] = [];
   const warnings: string[] = [];
   const active = state.filters.filter((f) => f.value.trim());
@@ -102,16 +129,28 @@ export function translate(state: Pick<QueryState, 'text' | 'filters'>): Translat
       expr = FILTER_MAP[f.key]?.(f.value.trim()) ?? null;
       if (!expr) warnings.push(`${f.key}:${f.value} støttes ikke i Netlas og ble hoppet over`);
     }
+    const needs = expr ? requiredPlan(expr, plan) : null;
+    if (expr && needs) {
+      const fb = BASIC_FALLBACK[f.key]?.(f.value.trim()) ?? null;
+      if (fb && !requiredPlan(fb, plan)) {
+        expr = fb;
+        warnings.push(`${f.key}:${f.value} krever ${needs} – bruker forenklet variant`);
+      } else {
+        expr = null;
+        warnings.push(`${f.key}:${f.value} krever Netlas ${needs} og ble hoppet over`);
+      }
+    }
     if (expr) parts.push(f.negate ? `!${expr.startsWith('(') || !expr.includes(' ') ? expr : `(${expr})`}` : expr);
   }
   return { query: parts.join(' AND '), warnings };
 }
 
-export function netlasFacets(facets: string[]): { fields: string[]; skipped: string[] } {
+export function netlasFacets(facets: string[], plan: NetlasPlan = 'business'): { fields: string[]; skipped: string[] } {
   const fields: string[] = [];
   const skipped: string[] = [];
   for (const f of facets) {
-    const n = FACET_MAP[f];
+    let n: string | undefined = FACET_MAP[f];
+    if (n && requiredPlan(`${n}:x`, plan)) n = f === 'product' ? 'protocol' : undefined;
     if (n && !fields.includes(n)) fields.push(n);
     else if (!n) skipped.push(f);
   }
@@ -161,7 +200,8 @@ async function get<T>(path: string, params: Record<string, string | number | und
     const b = body as { detail?: string; error?: string; message?: string };
     let msg = b.detail ?? b.error ?? b.message ?? res.statusText;
     if (res.status === 429) msg = `Netlas: rate-limit/dagskvote nådd (${msg})`;
-    if (res.status === 401 || res.status === 403) msg = `Netlas avviste nøkkelen (${msg}) – sjekk NETLAS_API_KEY`;
+    if (/not available for this plan/i.test(msg)) msg = `Netlas: et av feltene i søket krever høyere plan (${msg}). Sjekk planvalget.`;
+    else if (res.status === 401 || res.status === 403) msg = `Netlas avviste forespørselen (${msg}) – sjekk NETLAS_API_KEY`;
     if (res.status === 402) msg = `Netlas: krever høyere plan (${msg})`;
     throw new NetlasError(msg, res.status);
   }
