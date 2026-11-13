@@ -4,7 +4,7 @@ Et enklere søkegrensesnitt oppå Shodan-API-et: søkebygger, grupperinger (fase
 
 ## To moduser
 
-- **InternetDB (gratis, standard):** slår opp IP-er, CIDR-nett (maks /22) og domener mot [Shodan InternetDB](https://internetdb.shodan.io). Krever ingen nøkkel. Du får porter, CVE-er, tags, CPE-er og vertsnavn, gruppert med drill-down og CSV-eksport. Domener slås opp via Cloudflare DNS-over-HTTPS. Ferdige forslag ligger som knapper (norske nettsteder, banker, offentlig sektor, DNS-resolvere og «min IP»).
+- **InternetDB (gratis, standard):** slår opp IP-er, CIDR-nett (maks /22) og domener mot [Shodan InternetDB](https://internetdb.shodan.io). Krever ingen nøkkel. Du får porter, CVE-er, tags, CPE-er og vertsnavn, gruppert med drill-down og CSV-eksport. Domener slås opp via Cloudflare DNS-over-HTTPS. Ferdige forslag ligger som knapper (norske nettsteder, banker, offentlig sektor, DNS-resolvere og «min IP»). «📷 Kamera-sjekk» filtrerer på kamera-porter (554, 8554, 8000, 37777, 34567), kamera-CPE-er (Hikvision, Dahua, Axis, Reolink …) og webcam-tag – nyttig for å se om egne kameraer er eksponert.
 - **Shodan-søk (API-nøkkel):** fullt søk med filtre og fasetter. Krever betalt Shodan-nivå (Membership eller høyere) for filtre. En gratis nøkkel gir bare oppslag på enkelt-IP-er og visning av credits. Sidepanelet har ferdige forslag til søk (eksponerte tjenester i Norge, sårbarhet og hygiene, admin-flater, oversikt), definert i `src/presets.ts`.
 
 ## Funksjoner (Shodan-søk)

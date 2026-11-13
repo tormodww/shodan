@@ -151,3 +151,4 @@ textarea { font: inherit; font-family: var(--mono); color: var(--text); backgrou
 tr.expanded td { background: var(--panel-2); cursor: default; }
 tr.expanded dl { margin: 4px 0 10px; }
 a.cve { color: var(--accent-2); font-family: var(--mono); font-size: 12px; margin-right: 8px; display: inline-block; }
+.chip.active-chip { background: var(--accent); border-color: var(--accent); color: #fff; }

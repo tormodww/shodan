@@ -102,8 +102,33 @@ export async function lookupMany(
   return hosts;
 }
 
+// --- Kamera-sjekk -------------------------------------------------------------
+
+const CAMERA_PORTS: Record<number, string> = {
+  554: 'RTSP (554)',
+  8554: 'RTSP (8554)',
+  37777: 'Dahua (37777)',
+  34567: 'DVR/XMEye (34567)',
+  8000: 'Hikvision SDK (8000)',
+};
+const CAMERA_VENDORS = ['hikvision', 'dahua', 'axis', 'reolink', 'foscam', 'uniview', 'amcrest', 'vivotek', 'hanwha', 'samsung_techwin', 'mobotix', 'ubiquiti:unifi_video', 'xiongmai'];
+const CAMERA_TAGS = ['webcam', 'camera', 'videogame'];
+
+/** Hvilke tegn tyder på at verten er et kamera/DVR. Tom liste = ingen. */
+export function cameraSignals(h: IdbHost): string[] {
+  const out: string[] = [];
+  for (const p of h.ports) if (CAMERA_PORTS[p]) out.push(CAMERA_PORTS[p]);
+  for (const c of h.cpes) {
+    const v = CAMERA_VENDORS.find((x) => c.toLowerCase().includes(x));
+    if (v) out.push(`CPE: ${v}`);
+  }
+  for (const t of h.tags) if (CAMERA_TAGS.slice(0, 2).includes(t)) out.push(`tag: ${t}`);
+  return [...new Set(out)];
+}
+
 /** Klient-side grupperinger, i samme format som Shodan-fasetter. */
 export const IDB_FACETS: { key: string; label: string; get: (h: IdbHost) => string[] }[] = [
+  { key: 'camera', label: 'Kamera-signal', get: cameraSignals },
   { key: 'port', label: 'Port', get: (h) => h.ports.map(String) },
   { key: 'vuln', label: 'Sårbarhet', get: (h) => h.vulns },
   { key: 'tag', label: 'Tag', get: (h) => h.tags },

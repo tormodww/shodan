@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useRef, useState } from 'react';
 import { FacetPanel } from './components';
-import { IDB_FACETS, lookupMany, parseTargets, type IdbHost, type IdbProgress } from './internetdb';
+import { IDB_FACETS, cameraSignals, lookupMany, parseTargets, type IdbHost, type IdbProgress } from './internetdb';
 import { IDB_PRESETS } from './presets';
 import type { FacetBucket } from './shodan';
 import { downloadFile } from './storage';
@@ -28,6 +28,7 @@ export default function InternetDbView() {
   const [error, setError] = useState('');
   const [filters, setFilters] = useState<ClientFilter[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [camOnly, setCamOnly] = useState(false);
   const abort = useRef<AbortController | null>(null);
 
   const run = async (text = input) => {
@@ -75,6 +76,7 @@ export default function InternetDbView() {
   const visible = useMemo(
     () =>
       hosts
+        .filter((h) => !camOnly || cameraSignals(h).length > 0)
         .filter((h) =>
           filters.every((f) => {
             const vals = IDB_FACETS.find((x) => x.key === f.key)!.get(h);
@@ -82,7 +84,7 @@ export default function InternetDbView() {
           }),
         )
         .sort((a, b) => b.vulns.length - a.vulns.length || b.ports.length - a.ports.length),
-    [hosts, filters],
+    [hosts, filters, camOnly],
   );
 
   const facets = useMemo(() => {
@@ -91,6 +93,7 @@ export default function InternetDbView() {
       const counts = new Map<string, number>();
       for (const h of visible) for (const v of f.get(h)) counts.set(v, (counts.get(v) ?? 0) + 1);
       if (f.key === 'source' && counts.size < 2) continue;
+      if (f.key === 'camera' && counts.size === 0) continue;
       out[f.key] = [...counts.entries()]
         .map(([value, count]) => ({ value, count }))
         .sort((a, b) => b.count - a.count)
@@ -157,8 +160,12 @@ export default function InternetDbView() {
 
       {hosts.length > 0 && (
         <>
+          <div className="quick">
+            <button className={`chip ${camOnly ? 'active-chip' : ''}`} onClick={() => setCamOnly(!camOnly)} title="Vis bare verter med kamera-porter (RTSP, Dahua, DVR, Hikvision), kamera-CPE eller webcam-tag">
+              📷 Kamera-sjekk {camOnly ? 'på' : 'av'} ({hosts.filter((h) => cameraSignals(h).length).length})
+            </button>
           {filters.length > 0 && (
-            <div className="quick">
+            <>
               <span className="muted small">Filtre:</span>
               {filters.map((f, i) => (
                 <button key={i} className={`chip ${f.negate ? 'neg-chip' : ''}`} title="Fjern" onClick={() => setFilters(filters.filter((_, j) => j !== i))}>
@@ -166,8 +173,9 @@ export default function InternetDbView() {
                 </button>
               ))}
               <button className="ghost small" onClick={() => setFilters([])}>Fjern alle</button>
-            </div>
+            </>
           )}
+          </div>
           <div className="summary">
             <strong>{visible.length}</strong> verter med data
             <span className="muted"> · {visible.reduce((a, h) => a + h.vulns.length, 0)} CVE-funn</span>
@@ -200,6 +208,7 @@ export default function InternetDbView() {
                       <tr onClick={() => setExpanded(expanded === h.ip ? null : h.ip)}>
                         <td className="mono">
                           {h.ip}
+                          {cameraSignals(h).length > 0 && <span title={cameraSignals(h).join(', ')}> 📷</span>}
                           {h.source && <div className="muted small">{h.source}</div>}
                         </td>
                         <td className="ellipsis">{h.hostnames.slice(0, 2).join(', ')}{h.hostnames.length > 2 ? ` +${h.hostnames.length - 2}` : ''}</td>
@@ -215,6 +224,12 @@ export default function InternetDbView() {
                               <dd>{h.hostnames.join(', ') || '–'}</dd>
                               <dt>Programvare</dt>
                               <dd className="mono small">{h.cpes.join(', ') || '–'}</dd>
+                              {cameraSignals(h).length > 0 && (
+                                <>
+                                  <dt>Kamera-signal</dt>
+                                  <dd>{cameraSignals(h).join(', ')}</dd>
+                                </>
+                              )}
                               <dt>CVE-er</dt>
                               <dd>
                                 {h.vulns.length
