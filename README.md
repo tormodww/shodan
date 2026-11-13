@@ -23,10 +23,22 @@ Merk: alle som når siden kan bruke nøkkelen din via proxyen. Kjør den på LAN
 ```bash
 cp .env.example .env        # sett SHODAN_API_KEY
 docker compose up -d --build
-# åpne http://<pi-ip>:8088
+# åpne http://<pi-ip>:8473
 ```
 
 Imagene (`node:22-alpine`, `nginx:stable-alpine`) er multi-arch og fungerer på arm64.
+
+## Cloudflare Tunnel
+
+Appen lytter på port **8473** på verten (endres med `APP_PORT` i `.env`). Sjekk at porten er ledig før oppstart:
+
+```bash
+ss -tlnp | grep ':8473 ' || echo "8473 er ledig"
+```
+
+I tunnelen: `service: http://localhost:8473`. Kjører cloudflared på samme vert, sett `APP_BIND=127.0.0.1`.
+
+**Viktig:** proxyen bruker din API-nøkkel for alle som når siden. Legg en Cloudflare Access-policy (f.eks. e-post-OTP for deg selv) foran hostnavnet, ellers kan hvem som helst bruke opp credits-ene dine.
 
 ## Utvikling
 

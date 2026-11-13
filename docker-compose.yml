@@ -5,6 +5,7 @@ services:
     container_name: shodan-sok
     restart: unless-stopped
     ports:
-      - "8088:80"
+      # Vertsport for Cloudflare Tunnel (service: http://localhost:8473). Overstyr med APP_PORT/APP_BIND i .env.
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-8473}:80"
     environment:
       SHODAN_API_KEY: ${SHODAN_API_KEY:?Sett SHODAN_API_KEY i .env}
