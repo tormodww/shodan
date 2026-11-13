@@ -1,0 +1,10 @@
+services:
+  shodan-sok:
+    build: .
+    image: shodan-sok:latest
+    container_name: shodan-sok
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    environment:
+      SHODAN_API_KEY: ${SHODAN_API_KEY:?Sett SHODAN_API_KEY i .env}
