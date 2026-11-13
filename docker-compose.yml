@@ -1,6 +1,12 @@
 services:
   shodan-sok:
-    build: .
+    build:
+      context: .
+      args:
+        BYGG_COMMIT: ${BYGG_COMMIT:-}
+        BYGG_COMMIT_DATO: ${BYGG_COMMIT_DATO:-}
+        BYGG_PR: ${BYGG_PR:-}
+        BYGG_TID: ${BYGG_TID:-}
     image: shodan-sok:latest
     container_name: shodan-sok
     restart: unless-stopped
