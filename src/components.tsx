@@ -117,10 +117,12 @@ export function FacetPanel({
   facets,
   total,
   onPick,
+  labels = {},
 }: {
   facets: Record<string, FacetBucket[]>;
   total: number;
   onPick: (facet: string, value: string, negate: boolean) => void;
+  labels?: Record<string, string>;
 }) {
   const keys = Object.keys(facets);
   if (!keys.length) return null;
@@ -129,7 +131,7 @@ export function FacetPanel({
       {keys.map((k) => {
         const buckets = facets[k];
         const max = Math.max(1, ...buckets.map((b) => b.count));
-        const label = FACETS.find((f) => f.key === k)?.label ?? k;
+        const label = labels[k] ?? FACETS.find((f) => f.key === k)?.label ?? k;
         return (
           <section className="facet card" key={k}>
             <header>

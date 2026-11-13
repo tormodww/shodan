@@ -2,7 +2,12 @@
 
 Et enklere søkegrensesnitt oppå Shodan-API-et: søkebygger, grupperinger (fasetter) med drill-down, lagrede søk og CSV-eksport.
 
-## Funksjoner
+## To moduser
+
+- **InternetDB (gratis, standard):** slår opp IP-er, CIDR-nett (maks /22) og domener mot [Shodan InternetDB](https://internetdb.shodan.io). Krever ingen nøkkel. Du får porter, CVE-er, tags, CPE-er og vertsnavn, gruppert med drill-down og CSV-eksport. Domener slås opp via Cloudflare DNS-over-HTTPS. Ferdige forslag ligger som knapper (norske nettsteder, banker, offentlig sektor, DNS-resolvere og «min IP»).
+- **Shodan-søk (API-nøkkel):** fullt søk med filtre og fasetter. Krever betalt Shodan-nivå (Membership eller høyere) for filtre. En gratis nøkkel gir bare oppslag på enkelt-IP-er og visning av credits. Sidepanelet har ferdige forslag til søk (eksponerte tjenester i Norge, sårbarhet og hygiene, admin-flater, oversikt), definert i `src/presets.ts`.
+
+## Funksjoner (Shodan-søk)
 
 - **Søkebygger**: fritekst + filterrader (land, port, org, produkt, CVE, nett, HTTP-tittel, SSL …). `+`/`−` per rad for å inkludere/ekskludere. Ferdig spørring vises og kan kopieres.
 - **Tell og grupper (gratis)**: bruker `/shodan/host/count`, som ikke koster query credits. Gir totalt antall og fasetter (land, org, port, produkt, CVE, ASN, OS, tag, domene …).
@@ -55,6 +60,9 @@ npm run build
 
 ```
 src/shodan.ts       API-klient og typer
+src/internetdb.ts   InternetDB-klient, CIDR/DNS-tolking, grupperinger
+src/InternetDbView.tsx  InternetDB-fanen
+src/presets.ts      forhåndsdefinerte søk (rediger fritt)
 src/query.ts        filter-/fasettdefinisjoner, bygging av spørring, URL-hash
 src/storage.ts      localStorage for lagrede søk og historikk
 src/components.tsx  søkebygger, fasettpanel, resultattabell, detaljpanel

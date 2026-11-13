@@ -18,6 +18,17 @@ server {
         proxy_hide_header Set-Cookie;
     }
 
+    # Shodan InternetDB (gratis, ingen nøkkel)
+    location /internetdb/ {
+        limit_except GET { deny all; }
+        proxy_pass https://internetdb.shodan.io/;
+        proxy_set_header Host internetdb.shodan.io;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_read_timeout 30s;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

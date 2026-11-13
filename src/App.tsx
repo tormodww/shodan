@@ -11,6 +11,8 @@ import {
   toHash,
   type QueryState,
 } from './query';
+import InternetDbView from './InternetDbView';
+import { SHODAN_PRESETS } from './presets';
 import { shodan, type ApiInfo, type Match, type SearchResult } from './shodan';
 import {
   downloadFile,
@@ -23,6 +25,17 @@ import {
 } from './storage';
 
 type Mode = 'count' | 'search';
+type View = 'idb' | 'shodan';
+const VIEW_KEY = 'shodan-sok.view';
+
+function friendlyError(e: Error & { status?: number }): string {
+  if (e.status === 401 || e.status === 403 || /membership|upgrade|access denied|requires/i.test(e.message)) {
+    return `${e.message} – søket krever sannsynligvis betalt Shodan-nivå. Bruk «Tell og grupper» uten filtre, eller InternetDB-fanen.`;
+  }
+  return e.message;
+}
+
+const PRESET_GROUPS = [...new Set(SHODAN_PRESETS.map((p) => p.group))];
 
 export default function App() {
   const [state, setState] = useState<QueryState>(() => fromHash(location.hash) ?? emptyQuery());
@@ -35,6 +48,21 @@ export default function App() {
   const [saved, setSaved] = useState<SavedSearch[]>(loadSaved);
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
   const [groupBy, setGroupBy] = useState('');
+  const [view, setView] = useState<View>(() => {
+    try {
+      return (localStorage.getItem(VIEW_KEY) as View) || (location.hash.length > 1 ? 'shodan' : 'idb');
+    } catch {
+      return 'idb';
+    }
+  });
+  const switchView = (v: View) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* ignorer */
+    }
+  };
   const [open, setOpen] = useState<Match | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +96,7 @@ export default function App() {
       storeHistory(h);
       if (m === 'search') refreshInfo();
     } catch (e) {
-      setError((e as Error).message);
+      setError(friendlyError(e as Error & { status?: number }));
     } finally {
       setLoading(false);
     }
@@ -128,6 +156,14 @@ export default function App() {
         <h1>
           Shodan<span>søk</span>
         </h1>
+        <nav className="tabs">
+          <button className={view === 'idb' ? 'active' : ''} onClick={() => switchView('idb')}>
+            InternetDB <small>gratis</small>
+          </button>
+          <button className={view === 'shodan' ? 'active' : ''} onClick={() => switchView('shodan')}>
+            Shodan-søk <small>API-nøkkel</small>
+          </button>
+        </nav>
         <div className="credits">
           {info ? (
             <>
@@ -141,8 +177,37 @@ export default function App() {
         </div>
       </header>
 
+      {view === 'idb' ? (
+        <div className="layout single">
+          <InternetDbView />
+        </div>
+      ) : (
       <div className="layout">
         <aside className="side">
+          <section className="card">
+            <header>
+              <h2>Forslag</h2>
+            </header>
+            {PRESET_GROUPS.map((g, i) => (
+              <details key={g} className="preset-group" open={i === 0}>
+                <summary>{g}</summary>
+                <ul className="list">
+                  {SHODAN_PRESETS.filter((p) => p.group === g).map((p) => (
+                    <li key={p.name}>
+                      <button
+                        className="link"
+                        title={`${p.description}\n${buildQuery(p.state)}`}
+                        onClick={() => { setState(p.state); run('count', 1, p.state); }}
+                      >
+                        {p.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+          </section>
+
           <section className="card">
             <header>
               <h2>Lagrede søk</h2>
@@ -273,6 +338,7 @@ export default function App() {
           )}
         </main>
       </div>
+      )}
 
       {open && <DetailDrawer match={open} onClose={() => setOpen(null)} onFilter={(k, v) => addFilter(k, v, false)} />}
     </div>
